@@ -13,7 +13,9 @@ const library_id_list = ["Math", "window"];
 
 var_decls_map = {}; // for mult script fragment
 var_literal_map = {};
+var_array_map = {};
 func_return_literal_map = {};
+
 
 function isHtml(html_content) {
     return -1 !== html_content.search(/<\s*script/i) || -1 !== html_content.search(/<\s*body/i)
@@ -90,6 +92,23 @@ function process_script(script_content) {
                     }
                     
                     case esprima.Syntax.ArrayExpression: {
+                        if (parent.type === esprima.Syntax.VariableDeclarator
+                            && parent.id !== undefined
+                            && parent.id.type === esprima.Syntax.Identifier) {
+                            var array_name = parent.id.name
+                            if (var_array_map.hasOwnProperty(array_name)) {
+                                for (var i = 0, length = node.elements.length; i < length; i++) {
+                                    if (node.elements[i].type === esprima.Syntax.Literal) {
+                                        var_array_map[array_name][i] = node.elements[i].value
+                                    }
+                                }
+                            }
+                            else {
+                                //console.log("P")
+                            }
+
+                            
+                        }
                         if (node.elements.length === 1
                             && parent.type === esprima.Syntax.MemberExpression) {
                             return node.elements[0];
@@ -474,6 +493,7 @@ function process_script(script_content) {
                     }
                     // following case is wrong if the var isn't a const
                     case esprima.Syntax.Identifier: {
+                        /*
                         if (search_name_in_map(node.name, var_literal_map) !== undefined) {
                             var ret_val = var_literal_map[node.name];
                             var case_flag = false;
@@ -495,6 +515,7 @@ function process_script(script_content) {
                                     raw: ret_val
                                 };
                         }
+                        */
                         break;
                     }
                     case esprima.Syntax.LogicalExpression: {
@@ -574,6 +595,13 @@ function process_script(script_content) {
                                     break;
                                 }
                             }
+                            
+                            if (var_array_map.hasOwnProperty(node.object.name)
+                                && var_array_map[node.object.name].hasOwnProperty(property)) {
+                                ret_val = var_array_map[node.object.name][property]
+                                case_flag = true;
+                            }
+                            
                         }
                         break;
                     }
@@ -643,4 +671,3 @@ function main(filename) {
 if (module === require.main) {
     main(process.argv[2]);
 }
-
