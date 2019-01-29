@@ -6,12 +6,13 @@ esprima = require("esprima");
 estraverse = require("estraverse");
 escodegen = require("escodegen");
 cheerio = require('cheerio');
+atob = require('atob');
 ssa_util = require('./ssa_util');
 
 //const
 const library_id_list = ["Math", "window"];
 
-var_decls_map = {}; // for mult script fragment
+
 var_literal_map = {};
 var_array_map = {};
 func_return_literal_map = {};
@@ -96,15 +97,13 @@ function process_script(script_content) {
                             && parent.id !== undefined
                             && parent.id.type === esprima.Syntax.Identifier) {
                             var array_name = parent.id.name
-                            if (var_array_map.hasOwnProperty(array_name)) {
-                                for (var i = 0, length = node.elements.length; i < length; i++) {
-                                    if (node.elements[i].type === esprima.Syntax.Literal) {
-                                        var_array_map[array_name][i] = node.elements[i].value
-                                    }
-                                }
+                            if (!var_array_map.hasOwnProperty(array_name)) {
+                                var_array_map[array_name] = {}
                             }
-                            else {
-                                //console.log("P")
+                            for (var i = 0, length = node.elements.length; i < length; i++) {
+                                if (node.elements[i].type === esprima.Syntax.Literal) {
+                                    var_array_map[array_name][i] = node.elements[i].value
+                                }
                             }
 
                             
@@ -224,6 +223,11 @@ function process_script(script_content) {
                                             case_flag = true;
                                             break;
                                         }
+                                        case ("atob"): {
+                                            ret_val = atob(args[0].value);
+                                            case_flag = true;
+                                            break;
+                                        }                                        
                                     }
                                 }
                             }
@@ -493,7 +497,6 @@ function process_script(script_content) {
                     }
                     // following case is wrong if the var isn't a const
                     case esprima.Syntax.Identifier: {
-                        /*
                         if (search_name_in_map(node.name, var_literal_map) !== undefined) {
                             var ret_val = var_literal_map[node.name];
                             var case_flag = false;
@@ -515,7 +518,6 @@ function process_script(script_content) {
                                     raw: ret_val
                                 };
                         }
-                        */
                         break;
                     }
                     case esprima.Syntax.LogicalExpression: {
